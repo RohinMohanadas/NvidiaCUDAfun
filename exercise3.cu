@@ -13,7 +13,7 @@ struct Particle{
     float3 velocity;
 };
 __global__
-void saxpy(Particle x[],int N,int iter){
+void simulate(Particle x[],int N,int iter){
     //printf("Hello World! My threadId is %d\n",threadIdx.x);
     //printf("I am a part of block : %d\n",blockIdx.x);
 
@@ -98,8 +98,8 @@ int main(int argc, char *argv[]){
 
     cudaMalloc(&dX, size);
 
-    // copy from host to device
-    cudaMemcpy(dX, X, size, cudaMemcpyHostToDevice);
+    // copy from host to host
+    cudaMemcpy(temp, X, size, cudaMemcpyHostToHost);
 
     // compute on CPU
     printf("Updating particles on the CPU...  ");
@@ -119,9 +119,10 @@ int main(int argc, char *argv[]){
     // compute on GPU
     printf("Updating particles on the GPU...  ");
     t_start = chrono::high_resolution_clock::now();
+    cudaMemcpy(dX, temp, size, cudaMemcpyHostToDevice);    
     for(int i=0;i<NUM_ITERATIONS;i++){
 
-        saxpy<<<numBlocks,BLOCK_SIZE>>>(dX,NUM_PARTICLES,i);
+        simulate<<<numBlocks,BLOCK_SIZE>>>(dX,NUM_PARTICLES,i);
         //cudaThreadSynchronize();
 
         // copy to host memory after each simulation.
