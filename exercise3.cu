@@ -13,15 +13,16 @@ struct Particle{
     float3 velocity;
 };
 __global__
-void saxpy(Particle x[],int N){
+void saxpy(Particle x[],int N,int iter){
     //printf("Hello World! My threadId is %d\n",threadIdx.x);
     //printf("I am a part of block : %d\n",blockIdx.x);
 
     // update are random
     int i = blockDim.x * blockIdx.x + threadIdx.x;
+    int change = iter%2==0?-iter:iter;
     if(i < N){
-        x[i].position = make_float3(x[i].position.x+1,x[i].position.y+1,x[i].position.z+1);
-        x[i].velocity = make_float3(x[i].velocity.x+1,x[i].velocity.y+1,x[i].velocity.z+1);
+        x[i].velocity = make_float3(x[i].velocity.x+change,x[i].velocity.y+change,x[i].velocity.z+change);        
+        x[i].position = make_float3(x[i].position.x+x[i].velocity.x,x[i].position.y+x[i].velocity.y,x[i].position.z+x[i].velocity.z);
     }
 }
 
@@ -77,13 +78,13 @@ int main(int argc, char *argv[]){
     int numBlocks = (int)NUM_PARTICLES / BLOCK_SIZE  + 1;
 
     size_t size = NUM_PARTICLES*sizeof(Particle);
+    size_t v_size = NUM_ITERATIONS*sizeof(float3);
 
     // allocate memory in host
-    //float* X = (float*) malloc(size);
-    //float* Y = (float*) malloc(size);
 
     Particle* X = (Particle*) malloc(size);
     Particle* temp = (Particle*) malloc(size);
+    float3* velocityUpdates = (float3*) malloc(v_size);
     float A = 3.0;
 
     // initialize the array
@@ -103,11 +104,14 @@ int main(int argc, char *argv[]){
     // compute on CPU
     printf("Updating particles on the CPU...  ");
     auto t_start = chrono::high_resolution_clock::now();
-    for(int i=0;i<NUM_ITERATIONS;i++)
+    for(int i=0;i<NUM_ITERATIONS;i++){
+        int change = i%2==0?-i:i;
         for(int i=0;i<NUM_PARTICLES;i++){
-            X[i].position = make_float3(X[i].position.x+1,X[i].position.y+1,X[i].position.z+1);
-            X[i].velocity = make_float3(X[i].velocity.x+1,X[i].velocity.y+1,X[i].velocity.z+1);
+            X[i].velocity = make_float3(X[i].velocity.x+change,X[i].velocity.y+change,X[i].velocity.z+change);
+            X[i].position = make_float3(X[i].position.x+X[i].velocity.x,X[i].position.y+X[i].velocity.y,X[i].position.z+X[i].velocity.z);            
         }
+    }
+
 
     auto t_end = chrono::high_resolution_clock::now();
     cout<<"Done! in "<<chrono::duration<double, milli>(t_end-t_start).count()<<" ms\n\n";
@@ -117,7 +121,7 @@ int main(int argc, char *argv[]){
     t_start = chrono::high_resolution_clock::now();
     for(int i=0;i<NUM_ITERATIONS;i++){
 
-        saxpy<<<numBlocks,BLOCK_SIZE>>>(dX,NUM_PARTICLES);
+        saxpy<<<numBlocks,BLOCK_SIZE>>>(dX,NUM_PARTICLES,i);
         //cudaThreadSynchronize();
 
         // copy to host memory after each simulation.
