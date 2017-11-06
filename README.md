@@ -10,8 +10,8 @@ v9.0
 # How to run
 Compile using( Note: architecture depends on your GPU )
 
-`nvcc -arch=sm_30 -I./include exercise<n>.cu -o exercise<n> [optional arguments in exercise3]`
+`nvcc -arch=sm_30 -I./include exercise<n>.cu -o exercise<n> `
 
 Run using
 
-`./exercise<n>`
+`./exercise<n> [optional arguments in exercise3]`
